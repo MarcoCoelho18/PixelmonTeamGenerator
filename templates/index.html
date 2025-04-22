@@ -3,82 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokémon Team Randomizer</title>
+    <title>Pixelmon Team Randomizer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='pokeball.ico') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Pokémon Team Randomizer</h1>
-            <p>Create your perfect team of 6 Pokémon</p>
+            <h1>Pixelmon Team Randomizer</h1>
+            <p>Generate a random Pixelmon team</p>
         </header>
         
         <section class="controls">
-            <form method="POST" class="team-form">
-                <div class="form-group">
-                    <label for="legendary_count">Number of Legendaries:</label>
-                    <select name="legendary_count" id="legendary_count">
-                        {% for i in range(0, 7) %}
-                        <option value="{{ i }}" {% if legendary_count == i %}selected{% endif %}>{{ i }}</option>
-                        {% endfor %}
-                    </select>
+            <form method="POST" class="team-form" id="team-form">
+                <div class="form-row">
+                    <div class="form-group compact">
+                        <label for="legendary_count">Legendaries:</label>
+                        <select name="legendary_count" id="legendary_count">
+                            {% for i in range(0, 7) %}
+                            <option value="{{ i }}" {% if legendary_count == i %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group compact">
+                        <label for="generation">Generation:</label>
+                        <select name="generation" id="generation">
+                            <option value="">All</option>
+                            {% for gen in range(1, 10) %}
+                            <option value="{{ gen }}" {% if generation == gen|string %}selected{% endif %}>Gen {{ gen }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <button type="submit" class="generate-btn">Generate Team</button>
+                
+                <button type="submit" class="generate-btn" id="generate-btn">Generate Team</button>
+                <div class="error-message" id="form-error"></div>
             </form>
+            <div class="loading-container" id="loading">
+                <div class="loading"></div>
+                <span class="loading-text">Generating...</span>
+            </div>
         </section>
         
         {% if team %}
-        <section class="team-display">
-            <div class="team-container">
-                {% for pokemon in team %}
-                <div class="pokemon-card">
-                    <div class="card-inner {% if not pokemon.first_evolution %}no-flip{% endif %}">
-                        <div class="card-front">
-                            <div class="card-content">
-                                <div class="card-header">
-                                    <span class="pokemon-id">#{{ pokemon.id }}</span>
-                                    {% if pokemon.is_legendary %}
-                                    <span class="legendary-icon">★</span>
-                                    {% endif %}
-                                </div>
-                                <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
-                                <h3 class="pokemon-name">{{ pokemon.name }}</h3>
-                                <div class="types">
-                                    {% for type in pokemon.types %}
-                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                    {% endfor %}
-                                </div>
+        <div class="team-container">
+            {% for pokemon in team %}
+            <div class="pokemon-card" onclick="window.open('{{ pokemon.wiki_url }}', '_blank')">
+                <div class="card-inner {% if not pokemon.first_evolution or pokemon.first_evolution.id == pokemon.id %}no-flip{% endif %}">
+                    <div class="card-front">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <span class="pokemon-id">#{{ pokemon.id }}</span>
+                                {% if pokemon.is_legendary %}
+                                <span class="legendary-icon">★</span>
+                                {% endif %}
                             </div>
-                            <a href="{{ pokemon.wiki_url }}" target="_blank" class="card-link"></a>
-                        </div>
-                        {% if pokemon.first_evolution %}
-                        <div class="card-back">
-                            <div class="card-content">
-                                <div class="card-header">
-                                    <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
-                                </div>
-                                <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
-                                <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
-                                <div class="types">
-                                    {% for type in pokemon.first_evolution.types %}
-                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                    {% endfor %}
-                                </div>
+                            <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
+                            <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+                            <div class="types">
+                                {% for type in pokemon.types %}
+                                <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                {% endfor %}
                             </div>
-                            <a href="{{ pokemon.first_evolution.wiki_url }}" target="_blank" class="card-link"></a>
                         </div>
-                        {% endif %}
+                    </div>
+                    {% if pokemon.first_evolution and pokemon.first_evolution.id != pokemon.id %}
+                    <div class="card-back">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
+                            </div>
+                            <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
+                            <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
+                            <div class="types">
+                                {% for type in pokemon.first_evolution.types %}
+                                <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% for i in range(team|length, 6) %}
+            <div class="pokemon-card" data-empty="true">
+                <div class="card-inner no-flip">
+                    <div class="card-front">
+                        <div class="card-content">
+                            <img src="{{ url_for('static', filename='pokeball.png') }}" alt="Empty slot" class="pokemon-img">
+                            <h3 class="pokemon-name">Empty Slot</h3>
+                        </div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-        </section>
+            {% endfor %}
+        </div>
         {% endif %}
         
         <footer>
-            <p>Data from <a href="https://pokeapi.co/" target="_blank">PokeAPI</a></p>
+            <p>Data from <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer">PokeAPI</a></p>
         </footer>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form submission loading indicator
+            const form = document.getElementById('team-form');
+            const loadingElement = document.getElementById('loading');
+            const submitButton = document.getElementById('generate-btn');
+            const errorElement = document.getElementById('form-error');
+            
+            if (form && loadingElement && submitButton && errorElement) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    loadingElement.style.display = 'block';
+                    submitButton.disabled = true;
+                    errorElement.style.display = 'none';
+                    
+                    fetch('/', {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(text || 'Failed to generate team');
+                            });
+                        }
+                        return response.text();
+                    })
+                    .then(html => {
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        errorElement.textContent = 'Error: ' + error.message;
+                        errorElement.style.display = 'block';
+                    })
+                    .finally(() => {
+                        loadingElement.style.display = 'none';
+                        submitButton.disabled = false;
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
