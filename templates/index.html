@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Team Randomizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='pokeball.ico') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pokémon Team Randomizer</h1>
+            <p>Create your perfect team of 6 Pokémon</p>
+        </header>
+        
+        <section class="controls">
+            <form method="POST" class="team-form">
+                <div class="form-group">
+                    <label for="legendary_count">Number of Legendaries:</label>
+                    <select name="legendary_count" id="legendary_count">
+                        {% for i in range(0, 7) %}
+                        <option value="{{ i }}" {% if legendary_count == i %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="generate-btn">Generate Team</button>
+            </form>
+        </section>
+        
+        {% if team %}
+        <section class="team-display">
+            <div class="team-container">
+                {% for pokemon in team %}
+                <div class="pokemon-card">
+                    <div class="card-inner {% if not pokemon.first_evolution %}no-flip{% endif %}">
+                        <div class="card-front">
+                            <div class="card-content">
+                                <div class="card-header">
+                                    <span class="pokemon-id">#{{ pokemon.id }}</span>
+                                    {% if pokemon.is_legendary %}
+                                    <span class="legendary-icon">★</span>
+                                    {% endif %}
+                                </div>
+                                <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
+                                <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+                                <div class="types">
+                                    {% for type in pokemon.types %}
+                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <a href="{{ pokemon.wiki_url }}" target="_blank" class="card-link"></a>
+                        </div>
+                        {% if pokemon.first_evolution %}
+                        <div class="card-back">
+                            <div class="card-content">
+                                <div class="card-header">
+                                    <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
+                                </div>
+                                <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
+                                <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
+                                <div class="types">
+                                    {% for type in pokemon.first_evolution.types %}
+                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <a href="{{ pokemon.first_evolution.wiki_url }}" target="_blank" class="card-link"></a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+        
+        <footer>
+            <p>Data from <a href="https://pokeapi.co/" target="_blank">PokeAPI</a></p>
+        </footer>
+    </div>
+</body>
+</html>
