@@ -81,6 +81,7 @@ header p {
     max-width: 600px;
     border: 2px solid var(--primary);
     box-shadow: 5px 5px 0 var(--primary-dark);
+    padding-bottom: 1.5rem;
 }
 
 .team-form {
@@ -137,6 +138,16 @@ header p {
     box-shadow: 2px 2px 0 var(--primary-dark);
 }
 
+.danger-btn {
+    background-color: var(--danger);
+    color: white;
+    border: 2px solid var(--danger-dark);
+}
+
+.danger-btn:hover {
+    background-color: var(--danger-dark);
+}
+
 .loading {
     width: 16px;
     height: 16px;
@@ -160,7 +171,8 @@ header p {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 1rem;
-    margin-top: 1.5rem;
+    margin: 1.5rem auto;
+    max-width: 1200px;
 }
 
 .pokemon-card {
@@ -182,11 +194,44 @@ header p {
     background-color: rgba(0, 0, 0, 0.05);
     border: 2px dashed var(--border);
     cursor: default;
+    opacity: 0.6;
 }
 
 .pokemon-card[data-empty="true"]:hover {
     transform: none;
     box-shadow: 5px 5px 0 var(--primary-dark);
+}
+
+.add-pokemon {
+    cursor: pointer;
+    background-color: var(--primary);
+    border: 2px dashed var(--secondary);
+}
+
+.add-pokemon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px var(--secondary);
+}
+
+.add-pokemon-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.add-icon {
+    font-size: 4rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.add-text {
+    font-size: 1rem;
+    color: white;
+    text-shadow: 2px 2px 0 var(--primary-dark);
 }
 
 .card-inner {
@@ -231,6 +276,7 @@ header p {
     width: 100%;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 0.5rem;
 }
 
@@ -242,6 +288,23 @@ header p {
 .legendary-icon {
     color: var(--secondary);
     font-size: 1rem;
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    margin-left: auto;
+    font-family: 'Press Start 2P', cursive;
+    pointer-events: auto;
+}
+
+.remove-btn:hover {
+    color: var(--danger-dark);
+    transform: scale(1.2);
 }
 
 .pokemon-img {
@@ -273,6 +336,12 @@ header p {
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.team-actions {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
 }
 
 .error-message {
@@ -357,4 +426,15 @@ footer a:hover {
     .pokemon-card {
         height: 260px;
     }
+}
+.empty-slot {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 2px dashed var(--border);
+    cursor: default;
+    opacity: 0.6;
+}
+
+.empty-slot:hover {
+    transform: none;
+    box-shadow: 5px 5px 0 var(--primary-dark);
 }

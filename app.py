@@ -49,14 +49,12 @@ def save_cache():
         pickle.dump({'pokemon': pokemon_cache, 'evolution': evolution_families}, f)
 
 def pre_cache_pokemon():
-    """Pre-load all Pokémon data into cache"""
     print("Pre-caching Pokémon data...")
     with ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(get_pokemon_data, range(1, 1026))
     print("Pre-caching complete!")
 
 def update_cache():
-    """Update the Pokémon cache"""
     print("Starting cache update...")
     with ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(get_pokemon_data, range(1, 1026))
@@ -164,9 +162,8 @@ def get_pokemon_data(pokemon_id):
         pokemon_cache[pokemon_id] = None
         return None
 
-def get_random_team(legendary_count, generation=None):
-    team = []
-    used_families = set()
+def get_random_pokemon(existing_team, legendary_count, generation=None):
+    used_families = {fam for p in existing_team for fam in p.get('evolution_family', [])}
     max_attempts = 100
     
     if generation and generation in GENERATION_RANGES:
@@ -177,73 +174,86 @@ def get_random_team(legendary_count, generation=None):
         available_pokemon = [p for p in pokemon_cache.values() if p]
 
     if not available_pokemon:
-        return []
+        return None
+    
+    current_legendaries = len([p for p in existing_team if p and p.get('is_legendary')])
+    remaining_legendaries = max(0, legendary_count - current_legendaries)
     
     legendaries = [p for p in available_pokemon if p and p.get('is_legendary')]
     regulars = [p for p in available_pokemon if p and not p.get('is_legendary')]
     
     attempts = 0
-    while len(team) < 6 and attempts < max_attempts:
+    while attempts < max_attempts:
         attempts += 1
         
-        if len(team) < legendary_count and legendaries:
+        if remaining_legendaries > 0 and legendaries:
             pokemon = random.choice(legendaries)
             if pokemon and not any(fam in used_families for fam in pokemon.get('evolution_family', [])):
-                team.append(pokemon)
-                used_families.update(pokemon.get('evolution_family', []))
-                continue
+                return pokemon
         
         if regulars:
             pokemon = random.choice(regulars)
             if pokemon and not any(fam in used_families for fam in pokemon.get('evolution_family', [])):
-                team.append(pokemon)
-                used_families.update(pokemon.get('evolution_family', []))
+                return pokemon
     
-    return team[:6]
+    return None
+
+@app.route('/clear_slot/<int:slot_index>', methods=['POST'])
+def clear_slot(slot_index):
+    if 'team' in session and 0 <= slot_index < len(session['team']):
+        session['team'][slot_index] = None
+        session.modified = True
+    return {'team': session['team']}, 200
+
+@app.route('/generate_team', methods=['POST'])
+def generate_team():
+    if 'team' not in session:
+        session['team'] = [None] * 6  # Initialize with 6 empty slots
+    
+    legendary_count = int(request.form.get('legendary_count', 0))
+    generation = request.form.get('generation')
+    
+    session['form_values'] = {
+        'legendary_count': legendary_count,
+        'generation': generation
+    }
+    
+    # Generate 6 Pokémon
+    new_team = []
+    for _ in range(6):
+        pokemon = get_random_pokemon(
+            [p for p in new_team if p is not None],
+            legendary_count,
+            generation
+        )
+        new_team.append(pokemon if pokemon else None)
+    
+    session['team'] = new_team
+    session.modified = True
+    return {'team': session['team']}, 200
 
 @app.route('/clear_team', methods=['POST'])
 def clear_team():
-    if 'team' in session:
-        session.pop('team')
+    session['team'] = [None] * 6  # Reset to 6 empty slots
+    if 'form_values' in session:
+        session.pop('form_values')
     return '', 204
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
-    # Clear team on page refresh
-    if request.method == 'GET' and 'team' in session:
-        session.pop('team')
+    if 'team' not in session:
+        session['team'] = [None] * 6  # Start with 6 empty slots
     
-    # Initialize default form values
     form_values = {
         'legendary_count': 0,
         'generation': None
     }
     
-    # Handle form submission for new team
-    if request.method == 'POST':
-        try:
-            form_values['legendary_count'] = min(max(int(request.form.get('legendary_count', 0)), 0), 6)
-            form_values['generation'] = request.form.get('generation', None)
-            if form_values['generation'] and form_values['generation'] not in GENERATION_RANGES:
-                form_values['generation'] = None
-                
-            new_team = get_random_team(
-                form_values['legendary_count'],
-                form_values['generation']
-            )
-            if new_team:
-                session['team'] = new_team
-                session['form_values'] = form_values
-            
-        except (ValueError, TypeError) as e:
-            print(f"Error processing form: {e}")
-    
-    # Use saved form values if available
     if 'form_values' in session:
         form_values = session['form_values']
     
-    return render_template('index.html', 
-                         team=session.get('team'),
+    return render_template('index.html',
+                         team=session.get('team', [None]*6),
                          legendary_count=form_values['legendary_count'],
                          generation=form_values['generation'])
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixelmon Team Randomizer</title>
+    <title>Pokémon Team Randomizer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='pokeball.ico') }}">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -11,12 +11,12 @@
 <body>
     <div class="container">
         <header>
-            <h1>Pixelmon Team Randomizer</h1>
-            <p>Generate a random Pixelmon team</p>
+            <h1>Pokémon Team Randomizer</h1>
+            <p>Build your team one Pokémon at a time</p>
         </header>
         
         <section class="controls">
-            <form method="POST" class="team-form" id="team-form">
+            <form id="team-form">
                 <div class="form-row">
                     <div class="form-group compact">
                         <label for="legendary_count">Legendaries:</label>
@@ -37,71 +37,75 @@
                         </select>
                     </div>
                 </div>
-                
-                <button type="submit" class="generate-btn" id="generate-btn">Generate Team</button>
-                <div class="error-message" id="form-error"></div>
             </form>
+            
+            <div class="form-row" style="margin-top: 1rem;">
+                <button type="button" class="generate-btn" id="generate-team-btn">Generate Team</button>
+                <button type="button" class="generate-btn danger-btn" id="clear-team-btn">Clear Team</button>
+            </div>
+            
             <div class="loading-container" id="loading">
                 <div class="loading"></div>
                 <span class="loading-text">Generating...</span>
             </div>
+            <div class="error-message" id="form-error"></div>
         </section>
         
-        {% if team %}
-        <div class="team-container">
+        <div class="team-container" id="team-container">
             {% for pokemon in team %}
-            <div class="pokemon-card" onclick="window.open('{{ pokemon.wiki_url }}', '_blank')">
-                <div class="card-inner {% if not pokemon.first_evolution or pokemon.first_evolution.id == pokemon.id %}no-flip{% endif %}">
-                    <div class="card-front">
-                        <div class="card-content">
-                            <div class="card-header">
-                                <span class="pokemon-id">#{{ pokemon.id }}</span>
-                                {% if pokemon.is_legendary %}
-                                <span class="legendary-icon">★</span>
-                                {% endif %}
-                            </div>
-                            <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
-                            <h3 class="pokemon-name">{{ pokemon.name }}</h3>
-                            <div class="types">
-                                {% for type in pokemon.types %}
-                                <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% if pokemon.first_evolution and pokemon.first_evolution.id != pokemon.id %}
-                    <div class="card-back">
-                        <div class="card-content">
-                            <div class="card-header">
-                                <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
-                            </div>
-                            <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
-                            <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
-                            <div class="types">
-                                {% for type in pokemon.first_evolution.types %}
-                                <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                {% endfor %}
+                {% if pokemon %}
+                <div class="pokemon-card">
+                    <div class="card-inner {% if not pokemon.first_evolution or pokemon.first_evolution.id == pokemon.id %}no-flip{% endif %}">
+                        <div class="card-front">
+                            <div class="card-content">
+                                <div class="card-header">
+                                    <span class="pokemon-id">#{{ pokemon.id }}</span>
+                                    {% if pokemon.is_legendary %}
+                                    <span class="legendary-icon">★</span>
+                                    {% endif %}
+                                    <button class="remove-btn" data-slot-index="{{ loop.index0 }}">×</button>
+                                </div>
+                                <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
+                                <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+                                <div class="types">
+                                    {% for type in pokemon.types %}
+                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-            {% for i in range(team|length, 6) %}
-            <div class="pokemon-card" data-empty="true">
-                <div class="card-inner no-flip">
-                    <div class="card-front">
-                        <div class="card-content">
-                            <img src="{{ url_for('static', filename='pokeball.png') }}" alt="Empty slot" class="pokemon-img">
-                            <h3 class="pokemon-name">Empty Slot</h3>
+                        {% if pokemon.first_evolution and pokemon.first_evolution.id != pokemon.id %}
+                        <div class="card-back">
+                            <div class="card-content">
+                                <div class="card-header">
+                                    <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
+                                    <button class="remove-btn" data-slot-index="{{ loop.index0 }}">×</button>
+                                </div>
+                                <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
+                                <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
+                                <div class="types">
+                                    {% for type in pokemon.first_evolution.types %}
+                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
+                {% else %}
+                <div class="pokemon-card empty-slot">
+                    <div class="card-inner no-flip">
+                        <div class="card-front">
+                            <div class="card-content">
+                                <h3 class="pokemon-name">Empty Slot</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             {% endfor %}
         </div>
-        {% endif %}
         
         <footer>
             <p>Data from <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer">PokeAPI</a></p>
@@ -110,49 +114,139 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Form submission loading indicator
-            const form = document.getElementById('team-form');
+            const generateTeamBtn = document.getElementById('generate-team-btn');
+            const clearTeamBtn = document.getElementById('clear-team-btn');
+            const teamForm = document.getElementById('team-form');
             const loadingElement = document.getElementById('loading');
-            const submitButton = document.getElementById('generate-btn');
             const errorElement = document.getElementById('form-error');
-            
-            if (form && loadingElement && submitButton && errorElement) {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    loadingElement.style.display = 'block';
-                    submitButton.disabled = true;
-                    errorElement.style.display = 'none';
-                    
-                    fetch('/', {
+            const teamContainer = document.getElementById('team-container');
+
+            // Generate team
+            generateTeamBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                showLoading();
+                try {
+                    const formData = new FormData(teamForm);
+                    const response = await fetch('/generate_team', {
                         method: 'POST',
-                        body: new FormData(form),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(text || 'Failed to generate team');
-                            });
-                        }
-                        return response.text();
-                    })
-                    .then(html => {
-                        document.open();
-                        document.write(html);
-                        document.close();
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        errorElement.textContent = 'Error: ' + error.message;
-                        errorElement.style.display = 'block';
-                    })
-                    .finally(() => {
-                        loadingElement.style.display = 'none';
-                        submitButton.disabled = false;
+                        body: formData
                     });
+                    if (!response.ok) throw new Error('Failed to generate team');
+                    const data = await response.json();
+                    updateTeamUI(data.team);
+                } catch (error) {
+                    showError(error.message);
+                } finally {
+                    hideLoading();
+                }
+            });
+
+            // Clear slot
+            teamContainer.addEventListener('click', async function(e) {
+                if (e.target.classList.contains('remove-btn')) {
+                    e.stopPropagation();
+                    const slotIndex = e.target.getAttribute('data-slot-index');
+                    try {
+                        const response = await fetch(`/clear_slot/${slotIndex}`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                        if (!response.ok) throw new Error('Failed to clear slot');
+                        const data = await response.json();
+                        updateTeamUI(data.team);
+                    } catch (error) {
+                        showError(error.message);
+                    }
+                }
+            });
+
+            // Clear team
+            clearTeamBtn.addEventListener('click', async function() {
+                try {
+                    const response = await fetch('/clear_team', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    if (!response.ok) throw new Error('Failed to clear team');
+                    updateTeamUI([null, null, null, null, null, null]);
+                } catch (error) {
+                    showError(error.message);
+                }
+            });
+
+            // Update team UI
+            function updateTeamUI(team) {
+                teamContainer.innerHTML = '';
+                
+                team.forEach((pokemon, index) => {
+                    if (pokemon) {
+                        teamContainer.innerHTML += `
+                            <div class="pokemon-card">
+                                <div class="card-inner ${!pokemon.first_evolution || pokemon.first_evolution.id === pokemon.id ? 'no-flip' : ''}">
+                                    <div class="card-front">
+                                        <div class="card-content">
+                                            <div class="card-header">
+                                                <span class="pokemon-id">#${pokemon.id}</span>
+                                                ${pokemon.is_legendary ? '<span class="legendary-icon">★</span>' : ''}
+                                                <button class="remove-btn" data-slot-index="${index}">×</button>
+                                            </div>
+                                            <img src="${pokemon.sprite}" alt="${pokemon.name}" class="pokemon-img">
+                                            <h3 class="pokemon-name">${pokemon.name}</h3>
+                                            <div class="types">
+                                                ${pokemon.types.map(type => 
+                                                    `<span class="type type-${type.toLowerCase()}">${type}</span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ${pokemon.first_evolution && pokemon.first_evolution.id !== pokemon.id ? `
+                                    <div class="card-back">
+                                        <div class="card-content">
+                                            <div class="card-header">
+                                                <span class="pokemon-id">#${pokemon.first_evolution.id}</span>
+                                                <button class="remove-btn" data-slot-index="${index}">×</button>
+                                            </div>
+                                            <img src="${pokemon.first_evolution.sprite}" alt="${pokemon.first_evolution.name}" class="pokemon-img">
+                                            <h3 class="pokemon-name">${pokemon.first_evolution.name}</h3>
+                                            <div class="types">
+                                                ${pokemon.first_evolution.types.map(type => 
+                                                    `<span class="type type-${type.toLowerCase()}">${type}</span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        teamContainer.innerHTML += `
+                            <div class="pokemon-card empty-slot">
+                                <div class="card-inner no-flip">
+                                    <div class="card-front">
+                                        <div class="card-content">
+                                            <h3 class="pokemon-name">Empty Slot</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
                 });
+            }
+
+            function showLoading() {
+                loadingElement.style.display = 'block';
+                errorElement.style.display = 'none';
+            }
+
+            function hideLoading() {
+                loadingElement.style.display = 'none';
+            }
+
+            function showError(message) {
+                errorElement.textContent = 'Error: ' + message;
+                errorElement.style.display = 'block';
             }
         });
     </script>
