@@ -1,7 +1,7 @@
 
 # Pokémon Team Randomizer
 
-![Pokémon Team Randomizer Screenshot](https://imgur.com/a/hX0qzOy)
+![Pokémon Team Randomizer Screenshot](image.png)
 
 A web application that generates random Pokémon teams based on user preferences, with options to filter by generation and legendary count.
 
