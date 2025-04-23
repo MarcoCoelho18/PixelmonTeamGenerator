@@ -13,7 +13,12 @@ app.secret_key = 'dev-secret-key'
 CACHE_FILE = 'pokemon_cache.pkl'
 pokemon_cache = {}
 evolution_families = {}
-
+def clean_pokemon_name(name):
+    # Replace different types of hyphens/dashes with a standard hyphen
+    name = name.replace('‑', '-').replace('–', '-').replace('—', '-')
+    # Handle spaces and apostrophes
+    name = name.replace(' ', '_').replace("'", "%27")
+    return name
 GENERATION_RANGES = {
     '1': (1, 151),
     '2': (152, 251),
@@ -63,12 +68,6 @@ def update_cache():
 pokemon_cache, evolution_families = load_cache()
 atexit.register(save_cache)
 
-def clean_pokemon_name(name):
-    # Replace different types of hyphens/dashes with a standard hyphen
-    name = name.replace('‑', '-').replace('–', '-').replace('—', '-')
-    # Handle spaces and apostrophes
-    name = name.replace(' ', '_').replace("'", "%27")
-    return name
 
 def get_evolution_family(species_url):
     if species_url in evolution_families:
@@ -287,4 +286,4 @@ if __name__ == '__main__':
     scheduler.add_job(update_cache, 'cron', hour=3)
     scheduler.start()
     
-    app.run(debug=True)
+    app.run(debug=True, port=8000)
