@@ -36,12 +36,24 @@
                             {% endfor %}
                         </select>
                     </div>
+
+                    <div class="form-group compact">
+                        <label for="team_size">Team Size:</label>
+                        <select name="team_size" id="team_size">
+                            {% for i in range(1, 7) %}
+                            <option value="{{ i }}" {% if team_size == i %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
             </form>
             
             <div class="form-row" style="margin-top: 1rem;">
                 <button type="button" class="generate-btn" id="generate-team-btn">Generate Team</button>
-                <button type="button" class="generate-btn danger-btn" id="clear-team-btn">Clear Team</button>
+                <div class="reroll-counter">
+                    <span>Rerolls:</span>
+                    <span id="reroll-count">5</span>
+                </div>
             </div>
             
             <div class="loading-container" id="loading">
@@ -53,57 +65,48 @@
         
         <div class="team-container" id="team-container">
             {% for pokemon in team %}
-                {% if pokemon %}
-                <div class="pokemon-card">
-                    <div class="card-inner {% if not pokemon.first_evolution or pokemon.first_evolution.id == pokemon.id %}no-flip{% endif %}">
-                        <div class="card-front">
-                            <div class="card-content">
-                                <div class="card-header">
-                                    <span class="pokemon-id">#{{ pokemon.id }}</span>
-                                    {% if pokemon.is_legendary %}
-                                    <span class="legendary-icon">★</span>
-                                    {% endif %}
-                                    <button class="remove-btn" data-slot-index="{{ loop.index0 }}">×</button>
-                                </div>
-                                <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
-                                <h3 class="pokemon-name">{{ pokemon.name }}</h3>
-                                <div class="types">
-                                    {% for type in pokemon.types %}
-                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        {% if pokemon.first_evolution and pokemon.first_evolution.id != pokemon.id %}
-                        <div class="card-back">
-                            <div class="card-content">
-                                <div class="card-header">
-                                    <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
-                                    <button class="remove-btn" data-slot-index="{{ loop.index0 }}">×</button>
-                                </div>
-                                <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
-                                <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
-                                <div class="types">
-                                    {% for type in pokemon.first_evolution.types %}
-                                    <span class="type type-{{ type.lower() }}">{{ type }}</span>
-                                    {% endfor %}
+                <div class="pokemon-card-container">
+                    <div class="pokemon-card" data-wiki-url="{{ pokemon.wiki_url }}">
+                        <div class="card-inner {% if not pokemon.first_evolution or pokemon.first_evolution.id == pokemon.id %}no-flip{% endif %}">
+                            <div class="card-front">
+                                <div class="card-content">
+                                    <div class="card-header">
+                                        <span class="pokemon-id">#{{ pokemon.id }}</span>
+                                        {% if pokemon.is_legendary %}
+                                        <span class="legendary-icon">★</span>
+                                        {% endif %}
+                                    </div>
+                                    <img src="{{ pokemon.sprite }}" alt="{{ pokemon.name }}" class="pokemon-img">
+                                    <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+                                    <div class="types">
+                                        {% for type in pokemon.types %}
+                                        <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% else %}
-                <div class="pokemon-card empty-slot">
-                    <div class="card-inner no-flip">
-                        <div class="card-front">
-                            <div class="card-content">
-                                <h3 class="pokemon-name">Empty Slot</h3>
+                            {% if pokemon.first_evolution and pokemon.first_evolution.id != pokemon.id %}
+                            <div class="card-back">
+                                <div class="card-content">
+                                    <div class="card-header">
+                                        <span class="pokemon-id">#{{ pokemon.first_evolution.id }}</span>
+                                    </div>
+                                    <img src="{{ pokemon.first_evolution.sprite }}" alt="{{ pokemon.first_evolution.name }}" class="pokemon-img">
+                                    <h3 class="pokemon-name">{{ pokemon.first_evolution.name }}</h3>
+                                    <div class="types">
+                                        {% for type in pokemon.first_evolution.types %}
+                                        <span class="type type-{{ type.lower() }}">{{ type }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
+                    <button class="reroll-btn" data-index="{{ loop.index0 }}" {% if not pokemon %}disabled{% endif %}>
+                        <div class="swap-icon">↻</div>
+                    </button>
                 </div>
-                {% endif %}
             {% endfor %}
         </div>
         
@@ -115,11 +118,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const generateTeamBtn = document.getElementById('generate-team-btn');
-            const clearTeamBtn = document.getElementById('clear-team-btn');
             const teamForm = document.getElementById('team-form');
             const loadingElement = document.getElementById('loading');
             const errorElement = document.getElementById('form-error');
             const teamContainer = document.getElementById('team-container');
+            const rerollCountElement = document.getElementById('reroll-count');
+            
+            let rerollsRemaining = 3;
+            let currentTeam = [];
 
             // Generate team
             generateTeamBtn.addEventListener('click', async function(e) {
@@ -133,44 +139,14 @@
                     });
                     if (!response.ok) throw new Error('Failed to generate team');
                     const data = await response.json();
-                    updateTeamUI(data.team);
+                    currentTeam = data.team;
+                    updateTeamUI(currentTeam);
+                    rerollsRemaining = 3;
+                    updateRerollCount();
                 } catch (error) {
                     showError(error.message);
                 } finally {
                     hideLoading();
-                }
-            });
-
-            // Clear slot
-            teamContainer.addEventListener('click', async function(e) {
-                if (e.target.classList.contains('remove-btn')) {
-                    e.stopPropagation();
-                    const slotIndex = e.target.getAttribute('data-slot-index');
-                    try {
-                        const response = await fetch(`/clear_slot/${slotIndex}`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'}
-                        });
-                        if (!response.ok) throw new Error('Failed to clear slot');
-                        const data = await response.json();
-                        updateTeamUI(data.team);
-                    } catch (error) {
-                        showError(error.message);
-                    }
-                }
-            });
-
-            // Clear team
-            clearTeamBtn.addEventListener('click', async function() {
-                try {
-                    const response = await fetch('/clear_team', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'}
-                    });
-                    if (!response.ok) throw new Error('Failed to clear team');
-                    updateTeamUI([null, null, null, null, null, null]);
-                } catch (error) {
-                    showError(error.message);
                 }
             });
 
@@ -179,16 +155,17 @@
                 teamContainer.innerHTML = '';
                 
                 team.forEach((pokemon, index) => {
-                    if (pokemon) {
-                        teamContainer.innerHTML += `
-                            <div class="pokemon-card">
+                    if (!pokemon) return;
+                    
+                    const cardHtml = `
+                        <div class="pokemon-card-container">
+                            <div class="pokemon-card" data-wiki-url="${pokemon.wiki_url}">
                                 <div class="card-inner ${!pokemon.first_evolution || pokemon.first_evolution.id === pokemon.id ? 'no-flip' : ''}">
                                     <div class="card-front">
                                         <div class="card-content">
                                             <div class="card-header">
                                                 <span class="pokemon-id">#${pokemon.id}</span>
                                                 ${pokemon.is_legendary ? '<span class="legendary-icon">★</span>' : ''}
-                                                <button class="remove-btn" data-slot-index="${index}">×</button>
                                             </div>
                                             <img src="${pokemon.sprite}" alt="${pokemon.name}" class="pokemon-img">
                                             <h3 class="pokemon-name">${pokemon.name}</h3>
@@ -204,7 +181,6 @@
                                         <div class="card-content">
                                             <div class="card-header">
                                                 <span class="pokemon-id">#${pokemon.first_evolution.id}</span>
-                                                <button class="remove-btn" data-slot-index="${index}">×</button>
                                             </div>
                                             <img src="${pokemon.first_evolution.sprite}" alt="${pokemon.first_evolution.name}" class="pokemon-img">
                                             <h3 class="pokemon-name">${pokemon.first_evolution.name}</h3>
@@ -218,21 +194,117 @@
                                     ` : ''}
                                 </div>
                             </div>
-                        `;
-                    } else {
-                        teamContainer.innerHTML += `
-                            <div class="pokemon-card empty-slot">
-                                <div class="card-inner no-flip">
-                                    <div class="card-front">
-                                        <div class="card-content">
-                                            <h3 class="pokemon-name">Empty Slot</h3>
+                            <button class="reroll-btn" data-index="${index}" ${!pokemon ? 'disabled' : ''}>
+                                <div class="swap-icon">↻</div>
+                            </button>
+                        </div>
+                    `;
+                    teamContainer.innerHTML += cardHtml;
+                });
+                
+                setupCardClickEvents();
+                setupRerollButtons();
+            }
+
+            function setupCardClickEvents() {
+                document.querySelectorAll('.pokemon-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        const url = this.getAttribute('data-wiki-url');
+                        if (url) {
+                            window.open(url, '_blank');
+                        }
+                    });
+                });
+            }
+
+            function setupRerollButtons() {
+                document.querySelectorAll('.reroll-btn').forEach(button => {
+                    button.addEventListener('click', async function(e) {
+                        e.stopPropagation();
+                        
+                        if (rerollsRemaining <= 0) {
+                            
+                            return;
+                        }
+                        
+                        const index = parseInt(this.getAttribute('data-index'));
+                        if (isNaN(index)) {
+                            showError('Invalid Pokémon index');
+                            return;
+                        }
+                        
+                        const icon = this.querySelector('.swap-icon');
+                        icon.classList.add('spinning');
+                        
+                        try {
+                            const formData = new FormData(teamForm);
+                            formData.append('index', index);
+                            
+                            const response = await fetch('/reroll_pokemon', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            if (!response.ok) throw new Error('Failed to reroll Pokémon');
+                            
+                            const data = await response.json();
+                            currentTeam[index] = data.pokemon;
+                            rerollsRemaining--;
+                            updateRerollCount();
+                            
+                            // Update just this card
+                            const cardContainer = this.parentElement;
+                            const newCardHtml = `
+                                <div class="pokemon-card" data-wiki-url="${data.pokemon.wiki_url}">
+                                    <div class="card-inner ${!data.pokemon.first_evolution || data.pokemon.first_evolution.id === data.pokemon.id ? 'no-flip' : ''}">
+                                        <div class="card-front">
+                                            <div class="card-content">
+                                                <div class="card-header">
+                                                    <span class="pokemon-id">#${data.pokemon.id}</span>
+                                                    ${data.pokemon.is_legendary ? '<span class="legendary-icon">★</span>' : ''}
+                                                </div>
+                                                <img src="${data.pokemon.sprite}" alt="${data.pokemon.name}" class="pokemon-img">
+                                                <h3 class="pokemon-name">${data.pokemon.name}</h3>
+                                                <div class="types">
+                                                    ${data.pokemon.types.map(type => 
+                                                        `<span class="type type-${type.toLowerCase()}">${type}</span>`
+                                                    ).join('')}
+                                                </div>
+                                            </div>
                                         </div>
+                                        ${data.pokemon.first_evolution && data.pokemon.first_evolution.id !== data.pokemon.id ? `
+                                        <div class="card-back">
+                                            <div class="card-content">
+                                                <div class="card-header">
+                                                    <span class="pokemon-id">#${data.pokemon.first_evolution.id}</span>
+                                                </div>
+                                                <img src="${data.pokemon.first_evolution.sprite}" alt="${data.pokemon.first_evolution.name}" class="pokemon-img">
+                                                <h3 class="pokemon-name">${data.pokemon.first_evolution.name}</h3>
+                                                <div class="types">
+                                                    ${data.pokemon.first_evolution.types.map(type => 
+                                                        `<span class="type type-${type.toLowerCase()}">${type}</span>`
+                                                    ).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        ` : ''}
                                     </div>
                                 </div>
-                            </div>
-                        `;
-                    }
+                            `;
+                            
+                            cardContainer.querySelector('.pokemon-card').outerHTML = newCardHtml;
+                            setupCardClickEvents();
+                        } catch (error) {
+                            showError(error.message);
+                        } finally {
+                            icon.classList.remove('spinning');
+                        }
+                    });
                 });
+            }
+
+            function updateRerollCount() {
+                rerollCountElement.textContent = rerollsRemaining;
             }
 
             function showLoading() {
@@ -247,7 +319,14 @@
             function showError(message) {
                 errorElement.textContent = 'Error: ' + message;
                 errorElement.style.display = 'block';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 3000);
             }
+
+            // Initialize
+            setupCardClickEvents();
+            setupRerollButtons();
         });
     </script>
 </body>

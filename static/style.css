@@ -29,6 +29,8 @@
     --border: #D8D8D8;
     --danger: #ff4444;
     --danger-dark: #cc0000;
+    --card-width: 220px;
+    --card-height: 350px;
 }
 
 * {
@@ -49,7 +51,7 @@ body {
 
 .container {
     width: 100%;
-    max-width: 1400px;
+    max-width: 1500px;
     margin: 0 auto;
     padding: 1rem;
     flex: 1;
@@ -138,14 +140,16 @@ header p {
     box-shadow: 2px 2px 0 var(--primary-dark);
 }
 
-.danger-btn {
-    background-color: var(--danger);
-    color: white;
-    border: 2px solid var(--danger-dark);
+.reroll-counter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    margin-left: 1rem;
 }
 
-.danger-btn:hover {
-    background-color: var(--danger-dark);
+.reroll-counter span:first-child {
+    color: var(--text-light);
 }
 
 .loading {
@@ -168,70 +172,40 @@ header p {
 }
 
 .team-container {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 1rem;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
     margin: 1.5rem auto;
-    max-width: 1200px;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1rem 0;
+    justify-content: center;
+}
+
+
+.pokemon-card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    width: var(--card-width);
 }
 
 .pokemon-card {
-    height: 280px;
+    height: var(--card-height);
+    width: var(--card-width);
     perspective: 1000px;
     background-color: var(--card-bg);
     border: 2px solid var(--primary);
     box-shadow: 5px 5px 0 var(--primary-dark);
     transition: all 0.2s ease;
     cursor: pointer;
+    position: relative;
 }
 
 .pokemon-card:hover {
     transform: translate(2px, 2px);
     box-shadow: 3px 3px 0 var(--primary-dark);
-}
-
-.pokemon-card[data-empty="true"] {
-    background-color: rgba(0, 0, 0, 0.05);
-    border: 2px dashed var(--border);
-    cursor: default;
-    opacity: 0.6;
-}
-
-.pokemon-card[data-empty="true"]:hover {
-    transform: none;
-    box-shadow: 5px 5px 0 var(--primary-dark);
-}
-
-.add-pokemon {
-    cursor: pointer;
-    background-color: var(--primary);
-    border: 2px dashed var(--secondary);
-}
-
-.add-pokemon:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px var(--secondary);
-}
-
-.add-pokemon-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-}
-
-.add-icon {
-    font-size: 4rem;
-    line-height: 1;
-    margin-bottom: 0.5rem;
-}
-
-.add-text {
-    font-size: 1rem;
-    color: white;
-    text-shadow: 2px 2px 0 var(--primary-dark);
 }
 
 .card-inner {
@@ -250,15 +224,14 @@ header p {
     transform: rotateY(180deg);
 }
 
-.card-front,
-.card-back {
+.card-front, .card-back {
     position: absolute;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    padding: 0.8rem;
+    -webkit-backface-visibility: hidden;
+    overflow: hidden;
 }
-
 .card-back {
     transform: rotateY(180deg);
 }
@@ -269,9 +242,9 @@ header p {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
+    padding: 0.8rem;
     pointer-events: none;
 }
-
 .card-header {
     width: 100%;
     display: flex;
@@ -290,43 +263,40 @@ header p {
     font-size: 1rem;
 }
 
-.remove-btn {
-    background: none;
-    border: none;
-    color: var(--danger);
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0 0.3rem;
-    margin-left: auto;
-    font-family: 'Press Start 2P', cursive;
-    pointer-events: auto;
-}
-
-.remove-btn:hover {
-    color: var(--danger-dark);
-    transform: scale(1.2);
-}
-
 .pokemon-img {
-    width: 100px;
-    height: 100px;
+    width: 140px;
+    height: 140px;
     object-fit: contain;
     image-rendering: pixelated;
+    margin: 0.5rem 0;
 }
 
 .pokemon-name {
-    font-size: 1rem;
+    font-size: 0.9rem;
     margin: 0.3rem 0;
     text-align: center;
     color: var(--primary);
     text-transform: capitalize;
+    line-height: 1.3;
+    word-break: break-word;
+    max-width: 100%;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    padding: 0 0.2rem; /* Reduced padding to help fit */
 }
 
 .types {
     display: flex;
     gap: 0.3rem;
     justify-content: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* Changed from wrap to nowrap */
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0 0.5rem;
+    overflow: hidden; /* Hide any overflow if types are too wide */
 }
 
 .type {
@@ -336,12 +306,8 @@ header p {
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
-}
-
-.team-actions {
-    display: flex;
-    justify-content: center;
-    margin: 1rem 0;
+    white-space: nowrap;
+    flex-shrink: 0; /* Prevent types from shrinking */
 }
 
 .error-message {
@@ -351,90 +317,65 @@ header p {
     display: none;
 }
 
-footer {
-    text-align: center;
-    padding: 1rem;
-    font-size: 0.7rem;
+.reroll-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    transition: all 0.2s;
+    background-color: var(--card-bg);
+    border: 2px solid var(--primary);
+    border-radius: 4px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
 }
 
-footer a {
-    color: var(--primary);
-    text-decoration: none;
+.reroll-btn:hover {
+    transform: rotate(90deg);
+    background-color: var(--secondary);
 }
 
-footer a:hover {
-    text-decoration: underline;
+.reroll-btn .swap-icon {
+    transition: transform 0.2s;
 }
 
-.type-normal { background-color: var(--normal); }
-.type-fire { background-color: var(--fire); }
-.type-water { background-color: var(--water); }
-.type-electric { background-color: var(--electric); }
-.type-grass { background-color: var(--grass); }
-.type-ice { background-color: var(--ice); }
-.type-fighting { background-color: var(--fighting); }
-.type-poison { background-color: var(--poison); }
-.type-ground { background-color: var(--ground); }
-.type-flying { background-color: var(--flying); }
-.type-psychic { background-color: var(--psychic); }
-.type-bug { background-color: var(--bug); }
-.type-rock { background-color: var(--rock); }
-.type-ghost { background-color: var(--ghost); }
-.type-dragon { background-color: var(--dragon); }
-.type-dark { background-color: var(--dark); }
-.type-steel { background-color: var(--steel); }
-.type-fairy { background-color: var(--fairy); }
-
-@media (max-width: 1200px) {
-    .team-container {
-        grid-template-columns: repeat(3, 1fr);
-    }
+.reroll-btn:hover .swap-icon {
+    transform: rotate(90deg);
 }
 
-@media (max-width: 768px) {
-    .team-container {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    header h1 {
-        font-size: 1.4rem;
-    }
-    
-    .form-row {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
+.spinning {
+    animation: spin 0.5s linear infinite;
 }
 
-@media (max-width: 480px) {
-    .team-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .container {
-        padding: 0.5rem;
-    }
-    
-    header {
-        padding: 1rem;
-    }
-    
-    header h1 {
-        font-size: 1.2rem;
-    }
-    
-    .pokemon-card {
-        height: 260px;
-    }
-}
-.empty-slot {
-    background-color: rgba(0, 0, 0, 0.05);
-    border: 2px dashed var(--border);
-    cursor: default;
-    opacity: 0.6;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-.empty-slot:hover {
-    transform: none;
-    box-shadow: 5px 5px 0 var(--primary-dark);
+/* Type colors */
+.type-normal { background-color: var(--normal); color: white; }
+.type-fire { background-color: var(--fire); color: white; }
+.type-water { background-color: var(--water); color: white; }
+.type-electric { background-color: var(--electric); color: black; }
+.type-grass { background-color: var(--grass); color: white; }
+.type-ice { background-color: var(--ice); color: black; }
+.type-fighting { background-color: var(--fighting); color: white; }
+.type-poison { background-color: var(--poison); color: white; }
+.type-ground { background-color: var(--ground); color: black; }
+.type-flying { background-color: var(--flying); color: white; }
+.type-psychic { background-color: var(--psychic); color: white; }
+.type-bug { background-color: var(--bug); color: white; }
+.type-rock { background-color: var(--rock); color: white; }
+.type-ghost { background-color: var(--ghost); color: white; }
+.type-dragon { background-color: var(--dragon); color: white; }
+.type-dark { background-color: var(--dark); color: white; }
+.type-steel { background-color: var(--steel); color: black; }
+.type-fairy { background-color: var(--fairy); color: black; }
+
+.type-text {
+    color: inherit;
+    text-shadow: inherit;
 }

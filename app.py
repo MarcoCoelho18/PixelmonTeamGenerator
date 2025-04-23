@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, jsonify
 import requests
 import random
 import pickle
@@ -63,8 +63,12 @@ def update_cache():
 pokemon_cache, evolution_families = load_cache()
 atexit.register(save_cache)
 
-def clean_pixelmon_name(name):
-    return name.replace(' ', '_').replace('-', '_')
+def clean_pokemon_name(name):
+    # Replace different types of hyphens/dashes with a standard hyphen
+    name = name.replace('‑', '-').replace('–', '-').replace('—', '-')
+    # Handle spaces and apostrophes
+    name = name.replace(' ', '_').replace("'", "%27")
+    return name
 
 def get_evolution_family(species_url):
     if species_url in evolution_families:
@@ -136,8 +140,8 @@ def get_pokemon_data(pokemon_id):
             except Exception as e:
                 print(f"Error fetching evolution chain for {pokemon_id}: {e}")
         
-        pixelmon_name = clean_pixelmon_name(species_name)
-        pixelmon_url = f"https://pixelmonmod.com/wiki/{pixelmon_name}"
+        pokemon_name = clean_pokemon_name(species_name)
+        bulbapedia_url = f"https://bulbapedia.bulbagarden.net/wiki/{pokemon_name}_(Pokémon)"
         
         pokemon = {
             'id': data['id'],
@@ -146,7 +150,7 @@ def get_pokemon_data(pokemon_id):
             'types': [t['type']['name'].capitalize() for t in data['types']],
             'is_legendary': species_data.get('is_legendary', False) or species_data.get('is_mythical', False),
             'first_evolution': first_evolution,
-            'wiki_url': pixelmon_url,
+            'wiki_url': bulbapedia_url,
             'evolution_family': evolution_family
         }
         
@@ -163,7 +167,7 @@ def get_pokemon_data(pokemon_id):
         return None
 
 def get_random_pokemon(existing_team, legendary_count, generation=None):
-    used_families = {fam for p in existing_team for fam in p.get('evolution_family', [])}
+    used_families = {fam for p in existing_team if p is not None for fam in p.get('evolution_family', [])}
     max_attempts = 100
     
     if generation and generation in GENERATION_RANGES:
@@ -198,29 +202,48 @@ def get_random_pokemon(existing_team, legendary_count, generation=None):
     
     return None
 
-@app.route('/clear_slot/<int:slot_index>', methods=['POST'])
-def clear_slot(slot_index):
-    if 'team' in session and 0 <= slot_index < len(session['team']):
-        session['team'][slot_index] = None
+@app.route('/reroll_pokemon', methods=['POST'])
+def reroll_pokemon():
+    if 'team' not in session:
+        return jsonify({'error': 'No team to reroll from'}), 400
+    
+    try:
+        legendary_count = int(request.form.get('legendary_count', 0))
+        generation = request.form.get('generation')
+        index = int(request.form.get('index', 0))
+        team = session['team']
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid input parameters'}), 400
+
+    pokemon = get_random_pokemon(
+        [p for i, p in enumerate(team) if p is not None and i != index],
+        legendary_count,
+        generation
+    )
+    
+    if pokemon:
+        team[index] = pokemon
+        session['team'] = team
         session.modified = True
-    return {'team': session['team']}, 200
+        return jsonify({'pokemon': pokemon}), 200
+    else:
+        return jsonify({'error': 'Failed to find a valid Pokémon'}), 400
 
 @app.route('/generate_team', methods=['POST'])
 def generate_team():
-    if 'team' not in session:
-        session['team'] = [None] * 6  # Initialize with 6 empty slots
-    
     legendary_count = int(request.form.get('legendary_count', 0))
     generation = request.form.get('generation')
+    team_size = int(request.form.get('team_size', 6))
     
     session['form_values'] = {
         'legendary_count': legendary_count,
-        'generation': generation
+        'generation': generation,
+        'team_size': team_size
     }
     
-    # Generate 6 Pokémon
+    # Generate Pokémon team
     new_team = []
-    for _ in range(6):
+    for _ in range(team_size):
         pokemon = get_random_pokemon(
             [p for p in new_team if p is not None],
             legendary_count,
@@ -230,32 +253,31 @@ def generate_team():
     
     session['team'] = new_team
     session.modified = True
-    return {'team': session['team']}, 200
-
-@app.route('/clear_team', methods=['POST'])
-def clear_team():
-    session['team'] = [None] * 6  # Reset to 6 empty slots
-    if 'form_values' in session:
-        session.pop('form_values')
-    return '', 204
+    return jsonify({'team': session['team']}), 200
 
 @app.route('/', methods=['GET'])
 def index():
-    if 'team' not in session:
-        session['team'] = [None] * 6  # Start with 6 empty slots
-    
+    # Default form values
     form_values = {
         'legendary_count': 0,
-        'generation': None
+        'generation': None,
+        'team_size': 6
     }
     
+    # Update with session values if they exist
     if 'form_values' in session:
-        form_values = session['form_values']
+        form_values.update({
+            'legendary_count': session['form_values'].get('legendary_count', 0),
+            'generation': session['form_values'].get('generation'),
+            'team_size': session['form_values'].get('team_size', 6)
+        })
     
+    team = session.get('team', [])
     return render_template('index.html',
-                         team=session.get('team', [None]*6),
+                         team=team,
                          legendary_count=form_values['legendary_count'],
-                         generation=form_values['generation'])
+                         generation=form_values['generation'],
+                         team_size=form_values['team_size'])
 
 if __name__ == '__main__':
     if not pokemon_cache:
